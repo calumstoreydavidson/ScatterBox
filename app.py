@@ -2,12 +2,15 @@ import anvil.server
 from anvil_API_key import *
 from random import *
 import math
-
+from main import *
 
 anvil.server.connect(anvil_key)
 anvil.server.wait_forever()
 
 # {'dog': ('NOUN', '0.2', 128, 2)} POS, Information_content, Hue, position_in_sentence
+
+if __name__ == '__main__':
+    process_sentences('This is a sentence')
 
 @anvil.server.callable
 def get_rectangles(words):
