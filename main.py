@@ -18,32 +18,25 @@ tokenizer = RegexpTokenizer(r'\w+')
 #         words[word]
 
 
-def main():
-    test_text = "The fat platypus sat upon the gnarled old tree for the night while " \
-                "the curious seal swims across the vast ocean to read a book. the cow " \
-                "was happy on the sunny day.The cow attacked the villagers on the sunny day." \
-                "the book"
-    input_text = test_text
-
-    process_sentences(input_text)
-
-
 def process_sentences(input_text):
     sentences = input_text.split('.')
     for sentence in sentences:
         words = tokenizer.tokenize(sentence)
         tagged_words = pos_tag_input(words)
 
-        # dict = # {'dog': ('NOUN', '0.2', 128, 2)} POS, Information_content, Hue, position_in_sentence
+        # output_dict = # {'dog': ('NOUN', '0.2', 128, 2)} POS, Information_content, Hue, position_in_sentence
         # trashed_words = non noun/verbs - getting ignore for now
-        dict, trashed_words = parse_tagged_words(tagged_words)
+        output_dict, trashed_words = parse_tagged_words(tagged_words)
 
         # do stuff with DICT HERE !!!!!!!!!!!
+        # TODO - this code needs to be above the call ing server code
+        # - for separating the sentences
 
-        # debug - see dict outputs
+        # debug - see output_dict outputs
         print('\n\nSentence: ', sentence)
         print("Non-Noun/Verbs Encountered!!!", trashed_words)
-        print('Output: ', dict)
+        print('Output: ', output_dict)
+    return
 
 
 def pos_tag_input(words):
@@ -51,7 +44,7 @@ def pos_tag_input(words):
 
 
 def parse_tagged_words(tagged_words):
-    dict1 = {}
+    output_dict = {}
     trashed_words = []
     for i in range(len(tagged_words)):
         tag = tagged_words[i][1]
@@ -61,8 +54,14 @@ def parse_tagged_words(tagged_words):
         word_info_content = parse_tagged_word(tag, trashed_words, word)
 
         if word_info_content is not None:
-            dict1[word] = [tag, word_info_content, 0, i]
-    return dict1, trashed_words
+            output_dict[word] = [tag, word_info_content, 0, i]
+
+        # if output_dict is not None:
+        #     for word in output_dict.keys():
+        #         # word_category = get_word_category(word)
+        #         get_word_category(word)
+
+    return output_dict, trashed_words
 
 
 def parse_tagged_word(tag, trashed_words, word):
@@ -86,4 +85,30 @@ def get_word_info_content(word, tag_type):
     return word_info_content
 
 
-main()
+def get_word_category(word):
+    synset = wn.synsets(word)
+    print("word: ",word,"synset: ",synset)
+    hyponyms = get_hyponyms(synset)
+    print(hyponyms)
+    return None
+
+# from nltk.corpus import wordnet
+# food = wordnet.synset('food.n.01')
+# print(len(get_hyponyms(food))) # returns 1526
+
+def get_hyponyms(synset):
+    hyponyms = set()
+    print(synset.hyponyms)
+    for hyponym in synset.hyponyms:
+        hyponyms |= set(get_hyponyms(hyponym))
+    return hyponyms | set(synset.hyponyms())
+
+
+if __name__ == '__main__':
+    test_text = "The fat platypus sat upon the gnarled old tree for the night while " \
+                "the curious seal swims across the vast ocean to read a book. the cow " \
+                "was happy on the sunny day.The cow attacked the villagers on the sunny day." \
+                "the book"
+    input_text = test_text
+
+    process_sentences(input_text)
