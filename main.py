@@ -2,20 +2,16 @@ from nltk.corpus import wordnet as wn
 from nltk.corpus import wordnet_ic as wn_ic
 from nltk.corpus.reader.wordnet import information_content
 from nltk.tokenize import RegexpTokenizer
-# from anvil_API_key import *
 import nltk
-# import anvil.server
 
-# anvil.server.connect(anvil_key)
 
 brown_ic = wn_ic.ic("ic-brown.dat")
 tokenizer = RegexpTokenizer(r'\w+')
+noun_categories = {'animals': 24, 'body parts': 48, 'clothes': 72, 'colors': 96, 'days of the week': 120, 'food': 144,
+                   'letters': 168, 'names': 192, 'numbers': 216, 'relatives': 240, 'rooms': 264, 'shapes': 288,
+                   'sounds': 312, 'toys': 336, 'words': 360}
 
-
-# @anvil.server.callable
-# def get_rectangles(words):
-#     for word in words:
-#         words[word]
+verb_categories = []
 
 
 def process_sentences(input_text):
@@ -29,14 +25,14 @@ def process_sentences(input_text):
         output_dict, trashed_words = parse_tagged_words(tagged_words)
 
         # do stuff with DICT HERE !!!!!!!!!!!
-        # TODO - this code needs to be above the call ing server code
+        # TODO - this code needs to be above the calling server code
         # - for separating the sentences
 
         # debug - see output_dict outputs
         print('\n\nSentence: ', sentence)
         print("Non-Noun/Verbs Encountered!!!", trashed_words)
         print('Output: ', output_dict)
-    return
+    return output_dict
 
 
 def pos_tag_input(words):
@@ -56,11 +52,14 @@ def parse_tagged_words(tagged_words):
         if word_info_content is not None:
             output_dict[word] = [tag, word_info_content, 0, i]
 
-        # if output_dict is not None:
-        #     for word in output_dict.keys():
-        #         # word_category = get_word_category(word)
-        #         get_word_category(word)
-
+        if len(output_dict.keys()) > 0:
+            for word in output_dict.keys():
+                best_noun = ['', 0]
+                for noun in noun_categories.keys():
+                    score = task_3_1_get_word_path_similarity(word, noun, 'res')
+                    if best_noun[1] < score:
+                        best_noun = [noun, score]
+                output_dict[word][2] = noun_categories[best_noun[0]]
     return output_dict, trashed_words
 
 
@@ -87,21 +86,48 @@ def get_word_info_content(word, tag_type):
 
 def get_word_category(word):
     synset = wn.synsets(word)
-    print("word: ",word,"synset: ",synset)
-    hyponyms = get_hyponyms(synset)
-    print(hyponyms)
+    print("\nword: ", word, "synset: ", synset)
+    for sense in synset:
+        print("sense: ", sense)
+        hypernyms = get_hypernyms(sense)
+        print("hypernyms: ", hypernyms)
     return None
+
 
 # from nltk.corpus import wordnet
 # food = wordnet.synset('food.n.01')
-# print(len(get_hyponyms(food))) # returns 1526
+# print(len(get_hypernyms(food))) # returns 1526
 
-def get_hyponyms(synset):
-    hyponyms = set()
-    print(synset.hyponyms)
-    for hyponym in synset.hyponyms:
-        hyponyms |= set(get_hyponyms(hyponym))
-    return hyponyms | set(synset.hyponyms())
+
+def get_hypernyms(sense):
+    hypernyms = set()
+    # print(sense.hypernyms())
+    for hypernym in sense.hypernyms():
+        hypernyms |= set(get_hypernyms(hypernym))
+    return hypernyms | set(sense.hypernyms())
+
+
+def task_3_1_get_word_path_similarity(word1, word2, sim_measure=None):
+    synset1 = wn.synsets(word1)
+    synset2 = wn.synsets(word2)
+    best = 0
+    for sense1 in synset1:
+        for sense2 in synset2:
+            similarity = 0
+            if (sim_measure is not None and sense1.pos() == sense2.pos()) or sim_measure is None:
+                similarity = get_sim_measure(sense1, sense2, sim_measure)
+            if similarity is not None and similarity > best:
+                best = similarity
+    return best
+
+
+def get_sim_measure(sense1, sense2, sim_measure=None):
+    if sim_measure is None:
+        return sense1.path_similarity(sense2)
+    elif sim_measure == 'res':
+        return sense1.res_similarity(sense2, brown_ic)
+    elif sim_measure == 'lin':
+        return sense1.lin_similarity(sense2, brown_ic)
 
 
 if __name__ == '__main__':
